@@ -23,6 +23,7 @@ pytest mlflow_oidc_auth/tests/path/to/test_file.py -k name
 # Full matrix
 tox
 tox -e e2e          # OIDC/SAML/SCIM e2e vs a real Keycloak — docs/development.md
+tox -e py311        # the declared 3.11 floor: imports every module, then the suite outside hooks/
 
 # Format + lint (must pass before commit)
 pre-commit run --all-files

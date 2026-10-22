@@ -642,8 +642,9 @@ Defined in `.github/workflows/unit-tests.yml`:
 
 1. **React tests:** `yarn test:coverage` (Vitest with v8 coverage, 80% thresholds)
 2. **Python tests:** `tox -e py` (pytest + coverage, generates `coverage.xml`)
-3. **SonarCloud scan:** Uploads both Python and React coverage reports
-4. Runs on: pull requests (opened, edited, reopened, synchronize) and pushes to `main`
+3. **Python 3.11 floor:** `tox -e py311` (imports every module, then the suite outside `hooks/`; #471)
+4. **SonarCloud scan:** Uploads both Python and React coverage reports
+5. Runs on: pull requests (opened, edited, reopened, synchronize) and pushes to `main`
 
 Additional CI checks:
 - `.github/workflows/pre-commit.yml` - Runs all pre-commit hooks

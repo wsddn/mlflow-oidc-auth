@@ -132,12 +132,36 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  # The declared Python floor (requires-python >=3.11, #471). The shards run 3.14 only, so code
+  # using newer syntax or standard library would pass them and fail to import for a user on 3.11.
+  # Lighter than the shards: `tox -e py311` imports every module, then runs the suite outside
+  # hooks/ in this one job. No PostgreSQL service: those tests skip here and run in the shards.
+  # Capabilities (AGENTS.md, "agentic CI"): holds untrusted input (fork PR code) and reaches the
+  # network (PyPI); holds no secrets and only the workflow's read-only token; changes no state
+  # beyond its own runner.
+  python-floor:
+    name: Python 3.11 (declared floor)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: 3.11
+      - name: Run tests
+        run: |
+          python -m pip install --upgrade pip
+          pip install tox
+          tox -e py311
+
   # The check name other workflows and branch protection gate on. It passes only when the
-  # frontend job and every Python shard passed, and the shards together ran the whole suite.
+  # frontend job, every Python shard and the Python 3.11 job passed, and the shards together ran
+  # the whole suite.
   unit-tests:
     name: Run Unit testing
     runs-on: ubuntu-latest
-    needs: [frontend, python]
+    needs: [frontend, python, python-floor]
     if: always()
     steps:
       - name: Checkout
@@ -159,6 +183,7 @@ jobs:
         env:
           FRONTEND: ${{ needs.frontend.result }}
           PYTHON: ${{ needs.python.result }}
+          PYTHON_FLOOR: ${{ needs.python-floor.result }}
         run: |
-          echo "frontend: ${FRONTEND}, python shards: ${PYTHON}"
-          [ "${FRONTEND}" = success ] && [ "${PYTHON}" = success ]
+          echo "frontend: ${FRONTEND}, python shards: ${PYTHON}, python 3.11: ${PYTHON_FLOOR}"
+          [ "${FRONTEND}" = success ] && [ "${PYTHON}" = success ] && [ "${PYTHON_FLOOR}" = success ]

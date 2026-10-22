@@ -11,7 +11,7 @@ This guide covers setting up a local development environment, running tests, and
 | Yarn | Latest | Frontend package manager |
 | Git | Latest | Version control |
 
-The project uses Python 3.14 for development and CI. The minimum supported Python version for end users is 3.11.
+The project uses Python 3.14 for development and CI. The minimum supported Python version for end users is 3.11, which CI also tests (see [The Python 3.11 floor](#the-python-311-floor)).
 
 ## Getting Started
 
@@ -185,9 +185,10 @@ tox -e py -- --shard-count=4 --shard-index=2
 Use the `--opt=value` form: pytest registers these options from the test suite's `conftest.py`.
 Plain `tox -e py` (and plain `pytest`) still runs everything in one process.
 
-The final "Run Unit testing" job — the check name to gate on — passes only if the frontend job
-and every shard passed, and runs `scripts/ci/check_shards.py` to confirm the shards collected the
-same suite and together ran every collected test exactly once.
+The final "Run Unit testing" job — the check name to gate on — passes only if the frontend job,
+every shard and the [Python 3.11 job](#the-python-311-floor) passed, and runs
+`scripts/ci/check_shards.py` to confirm the shards collected the same suite and together ran every
+collected test exactly once.
 
 Files are balanced by the per-file durations in `mlflow_oidc_auth/tests/shard_weights.json`. A
 new test file with no entry is still assigned (weighted by its test count); the weights affect
@@ -197,6 +198,20 @@ balance, never what runs. When one shard is noticeably slower than the rest, dow
 ```bash
 # several runs' reports may be passed together to average out runner variance
 python scripts/ci/shard_weights.py path/to/unit-test-shard-*/junit.xml
+```
+
+#### The Python 3.11 floor
+
+`requires-python` is `>=3.11`, so the workflow also runs one job on Python 3.11: `tox -e py311`. It
+imports every module of the package (`scripts/ci/import_all_modules.py`), then runs the suite
+outside `hooks/`. The import step catches code that compiles on 3.11 but fails when it runs there,
+such as a dataclass default that 3.11 rejects as mutable: `compileall` checks syntax only, and the
+unit tests import only part of the package. The job has no PostgreSQL service, so the migration
+tests that need one skip there; they run in the shards.
+
+```bash
+# Needs a python3.11 on PATH. py311 is not in envlist, so plain `tox` does not need one.
+tox -e py311
 ```
 
 ### Frontend Tests (Vitest)
